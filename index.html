@@ -3,505 +3,352 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PAC-MAZE</title>
 <style>
 *{box-sizing:border-box}
 body{
- margin:0;background:#050713;color:white;
+ margin:0;background:#080b20;color:white;
  font-family:Arial,sans-serif;text-align:center;
- overflow-x:hidden;touch-action:pan-y;
+ overflow-x:hidden
 }
-header{padding:17px 8px 8px}
 h1{
- margin:0;color:#ffe600;font-size:34px;
- letter-spacing:5px;text-shadow:0 0 15px #ffcc00;
+ color:#ffe600;letter-spacing:5px;
+ text-shadow:0 0 15px #ffe600;
+ margin:18px 0 8px
 }
-.sub{color:#8995bd;font-size:12px;margin-top:5px}
-.stats{
- display:flex;justify-content:center;gap:12px;
- flex-wrap:wrap;margin:14px 8px;
+#stats{
+ display:flex;justify-content:center;
+ gap:22px;flex-wrap:wrap;margin:12px
 }
-.stat{
- background:#111a32;border:1px solid #29385f;
- border-radius:10px;padding:9px 15px;min-width:85px;
-}
-.stat small{display:block;color:#91a2d0;font-size:11px}
-.stat strong{font-size:19px;color:#fff}
-#lives{color:#ff5050}
-#gameBox{
- width:min(94vw,650px);margin:auto;
- background:#000;border:3px solid #243c91;
- border-radius:12px;padding:5px;
- box-shadow:0 0 25px #1738a5;
- position:relative;
-}
-canvas{
- width:100%;height:auto;display:block;
- image-rendering:pixelated;
+.stat{font-size:16px;color:#fff}
+.stat b{color:#ffe600}
+#game{
+ width:min(94vw,650px);
+ margin:12px auto;
+ background:#000;
+ border:3px solid #263bff;
+ border-radius:10px;
+ box-shadow:0 0 25px #1528ff66;
+ display:block
 }
 #message{
- position:absolute;inset:0;
- display:flex;align-items:center;justify-content:center;
- background:#000b;z-index:3;
- flex-direction:column;padding:20px;
+ min-height:28px;color:#ffe600;
+ font-weight:bold;margin:10px
 }
-#message h2{color:#ffe600;font-size:30px;margin:0 0 10px}
-#message p{color:#d3d9ed;font-size:14px;line-height:1.8}
 button{
- background:linear-gradient(135deg,#ffdf00,#ff9900);
- border:0;border-radius:12px;padding:13px 25px;
- font-weight:bold;font-size:16px;color:#171000;
- cursor:pointer;margin:5px;
+ background:#263bff;color:white;
+ border:0;border-radius:10px;
+ padding:12px 22px;font-size:16px;
+ font-weight:bold;margin:5px;cursor:pointer
 }
 button:active{transform:scale(.95)}
-.controls{
- display:grid;grid-template-columns:repeat(3,58px);
- grid-template-rows:repeat(2,52px);
- justify-content:center;gap:5px;margin:15px auto;
+#controls{
+ display:grid;grid-template-columns:60px 60px 60px;
+ grid-template-rows:55px 55px;
+ justify-content:center;gap:5px;margin:12px auto
 }
-.controls button{
- margin:0;padding:0;font-size:23px;
- background:#18274b;color:white;
- border:1px solid #526aa9;
-}
-.controls button:nth-child(1){grid-column:2;grid-row:1}
-.controls button:nth-child(2){grid-column:1;grid-row:2}
-.controls button:nth-child(3){grid-column:2;grid-row:2}
-.controls button:nth-child(4){grid-column:3;grid-row:2}
-.help{font-size:12px;color:#7787b3;margin:12px}
-#bottom{margin:15px;color:#62729d;font-size:11px}
+#controls button{padding:0;font-size:24px}
+#up{grid-column:2;grid-row:1}
+#left{grid-column:1;grid-row:2}
+#down{grid-column:2;grid-row:2}
+#right{grid-column:3;grid-row:2}
+small{color:#aab2df}
 </style>
 </head>
 <body>
-
-<header>
 <h1>PAC-MAZE</h1>
-<div class="sub">RANDOM GENERATED MAZE</div>
-</header>
 
-<div class="stats">
- <div class="stat"><small>SCORE</small><strong id="score">0</strong></div>
- <div class="stat"><small>HIGH SCORE</small><strong id="high">0</strong></div>
- <div class="stat"><small>LIVES</small><strong id="lives">♥ ♥ ♥</strong></div>
- <div class="stat"><small>STAGE</small><strong id="stage">1</strong></div>
+<div id="stats">
+ <div class="stat">SCORE <b id="score">0</b></div>
+ <div class="stat">LIFE <b id="life">3</b></div>
+ <div class="stat">STAGE <b id="stage">1</b></div>
 </div>
 
-<div id="gameBox">
- <canvas id="game" width="552" height="552"></canvas>
- <div id="message">
-  <h2>PAC-MAZE</h2>
-  <p>迷路のドットを全部食べよう！<br>
-  ゴーストに捕まらないように注意！<br>
-  パワーエサでゴーストを撃退！<br>
-  コースは毎回ランダム生成。</p>
-  <button onclick="startGame()">GAME START</button>
- </div>
-</div>
+<canvas id="game" width="600" height="600"></canvas>
+<div id="message">スタートを押して冒険開始！</div>
 
-<div>
- <button onclick="togglePause()">Ⅱ PAUSE</button>
- <button onclick="startGame()">↻ NEW GAME</button>
-</div>
+<button onclick="startGame()">▶ START</button>
+<button onclick="pauseGame()">Ⅱ PAUSE</button>
 
-<div class="controls">
- <button onclick="setDir(0,-1)">▲</button>
- <button onclick="setDir(-1,0)">◀</button>
- <button onclick="setDir(0,1)">▼</button>
- <button onclick="setDir(1,0)">▶</button>
+<div id="controls">
+ <button id="up">▲</button>
+ <button id="left">◀</button>
+ <button id="down">▼</button>
+ <button id="right">▶</button>
 </div>
-
-<div class="help">操作：矢印キー / WASD / 画面ボタン</div>
-<div id="bottom">PAC-MAZE · RANDOM MAZE SYSTEM</div>
+<small>矢印キー / WASD / タッチ操作</small>
 
 <script>
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 
-const W=23,H=23,T=24;
+const COLS=25,ROWS=25;
+const SIZE=24;
+const W=COLS*SIZE,H=ROWS*SIZE;
 
-let maze=[],dots=[],powers=[];
-let player,ghosts=[];
-let score=0,lives=3,stage=1,high=0;
-let running=false,paused=false,gameOver=false;
-let tick=0,powerTime=0;
-let animation=0;
+canvas.width=W;
+canvas.height=H;
+
+let map=[];
+let pellets=[];
+let powerPellets=[];
+let player;
+let ghosts=[];
+let score=0,life=3,stage=1;
+let running=false,paused=false;
+let powerTime=0;
 let lastTime=0;
 let moveTimer=0;
 let ghostTimer=0;
-let mouth=0;
-let direction={x:0,y:0};
-let nextDirection={x:0,y:0};
+let message="";
 
-try{high=Number(localStorage.getItem("pacmazeHigh"))||0}catch(e){}
-document.getElementById("high").textContent=high;
+const dirs={
+ up:{x:0,y:-1},
+ down:{x:0,y:1},
+ left:{x:-1,y:0},
+ right:{x:1,y:0}
+};
 
-const dirs=[
- {x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}
-];
+let wanted={x:0,y:0};
 
-function randomMaze(){
- maze=Array.from({length:H},()=>Array(W).fill(1));
+function makeMaze(){
+ map=Array.from({length:ROWS},()=>Array(COLS).fill(1));
 
- // ランダム化深さ優先探索で迷路を生成
- let stack=[];
- let start={x:1,y:1};
- maze[start.y][start.x]=0;
+ // ランダム迷路を作る
+ const visited=new Set();
+ const stack=[];
+ const start={x:1,y:1};
+
+ map[start.y][start.x]=0;
+ visited.add("1,1");
  stack.push(start);
 
  while(stack.length){
-  let current=stack[stack.length-1];
-  let options=[];
+  const p=stack[stack.length-1];
+  const choices=[];
 
-  for(let d of dirs){
-   let nx=current.x+d.x*2;
-   let ny=current.y+d.y*2;
+  for(const d of Object.values(dirs)){
+   const nx=p.x+d.x*2;
+   const ny=p.y+d.y*2;
+   const key=nx+","+ny;
 
-   if(nx>0&&ny>0&&nx<W-1&&ny<H-1&&maze[ny][nx]===1){
-    options.push({x:nx,y:ny,dx:d.x,dy:d.y});
+   if(nx>0&&nx<COLS-1&&ny>0&&ny<ROWS-1&&!visited.has(key)){
+    choices.push({x:nx,y:ny,dx:d.x,dy:d.y});
    }
   }
 
-  if(options.length===0){
-   stack.pop();
+  if(choices.length){
+   const c=choices[Math.floor(Math.random()*choices.length)];
+   map[p.y+c.dy][p.x+c.dx]=0;
+   map[c.y][c.x]=0;
+   visited.add(c.x+","+c.y);
+   stack.push({x:c.x,y:c.y});
   }else{
-   let next=options[Math.floor(Math.random()*options.length)];
-   maze[current.y+next.dy][current.x+next.dx]=0;
-   maze[next.y][next.x]=0;
-   stack.push({x:next.x,y:next.y});
+   stack.pop();
   }
  }
 
- // 壁を一部取り除いて複数のルートを作る
- for(let i=0;i<Math.floor(W*H*.10);i++){
-  let x=2+Math.floor(Math.random()*(W-4));
-  let y=2+Math.floor(Math.random()*(H-4));
-
-  if(maze[y][x]===1){
-   let horizontal=maze[y][x-1]===0&&maze[y][x+1]===0;
-   let vertical=maze[y-1][x]===0&&maze[y+1][x]===0;
-   if(horizontal||vertical)maze[y][x]=0;
+ // 通路を増やして遊びやすくする
+ for(let i=0;i<55;i++){
+  const x=1+Math.floor(Math.random()*(COLS-2));
+  const y=1+Math.floor(Math.random()*(ROWS-2));
+  if(map[y][x]===1){
+   let around=0;
+   if(map[y-1]?.[x]===0)around++;
+   if(map[y+1]?.[x]===0)around++;
+   if(map[y]?.[x-1]===0)around++;
+   if(map[y]?.[x+1]===0)around++;
+   if(around>=2)map[y][x]=0;
   }
  }
 
- // 迷路の通路がつながるように補修
- ensureConnectivity();
+ // 外周を壁にする
+ for(let x=0;x<COLS;x++){
+  map[0][x]=1;
+  map[ROWS-1][x]=1;
+ }
+ for(let y=0;y<ROWS;y++){
+  map[y][0]=1;
+  map[y][COLS-1]=1;
+ }
+
+ // スタート地点周辺を開ける
+ for(let y=1;y<=3;y++){
+  for(let x=1;x<=3;x++)map[y][x]=0;
+ }
 }
 
-function ensureConnectivity(){
- let first=null;
- for(let y=1;y<H-1;y++){
-  for(let x=1;x<W-1;x++){
-   if(maze[y][x]===0){first={x,y};break}
-  }
-  if(first)break;
- }
- if(!first)return;
+function isWall(x,y){
+ if(x<0||y<0||x>=COLS||y>=ROWS)return true;
+ return map[y][x]===1;
+}
 
- let visited=new Set();
- let queue=[first];
- visited.add(key(first.x,first.y));
+function newStage(){
+ makeMaze();
 
- while(queue.length){
-  let p=queue.shift();
-  for(let d of dirs){
-   let x=p.x+d.x,y=p.y+d.y;
-   let k=key(x,y);
-   if(x>0&&y>0&&x<W-1&&y<H-1&&
-      maze[y][x]===0&&!visited.has(k)){
-    visited.add(k);queue.push({x,y});
+ player={x:1,y:1,dir:{x:0,y:0}};
+ wanted={x:0,y:0};
+
+ pellets=[];
+ powerPellets=[];
+
+ for(let y=1;y<ROWS-1;y++){
+  for(let x=1;x<COLS-1;x++){
+   if(map[y][x]===0&&!(x===1&&y===1)){
+    pellets.push({x,y});
    }
   }
  }
 
- // 孤立部分を壁に戻す
- for(let y=1;y<H-1;y++){
-  for(let x=1;x<W-1;x++){
-   if(maze[y][x]===0&&!visited.has(key(x,y))){
-    maze[y][x]=1;
-   }
-  }
-}
+ // パワーエサを四隅付近に配置
+ const corners=[
+  {x:1,y:ROWS-2},
+  {x:COLS-2,y:1},
+  {x:COLS-2,y:ROWS-2},
+  {x:Math.floor(COLS/2),y:Math.floor(ROWS/2)}
+ ];
 
-function key(x,y){return x+","+y}
-function walk(x,y){
- return x>=0&&y>=0&&x<W&&y<H&&maze[y][x]===0;
-}
-
-function farthestFrom(sx,sy,count){
- let distances=new Map();
- let queue=[{x:sx,y:sy,d:0}];
- distances.set(key(sx,sy),0);
-
- while(queue.length){
-  let p=queue.shift();
-  for(let d of dirs){
-   let x=p.x+d.x,y=p.y+d.y,k=key(x,y);
-   if(walk(x,y)&&!distances.has(k)){
-    distances.set(k,p.d+1);
-    queue.push({x,y,d:p.d+1});
-   }
+ for(const p of corners){
+  if(!isWall(p.x,p.y)){
+   powerPellets.push({...p});
+   pellets=pellets.filter(a=>a.x!==p.x||a.y!==p.y);
   }
  }
 
- return [...distances.entries()]
- .sort((a,b)=>b[1]-a[1])
- .slice(0,count)
- .map(a=>{
-  let [x,y]=a[0].split(",").map(Number);
-  return {x,y};
+ ghosts=[
+  {x:COLS-2,y:ROWS-2,color:"#ff3030",home:{x:COLS-2,y:ROWS-2}},
+  {x:COLS-2,y:ROWS-3,color:"#ff8de1",home:{x:COLS-2,y:ROWS-3}},
+  {x:COLS-3,y:ROWS-2,color:"#00eaff",home:{x:COLS-3,y:ROWS-2}},
+  {x:COLS-3,y:ROWS-3,color:"#ff9b25",home:{x:COLS-3,y:ROWS-3}}
+ ];
+
+ // ゴーストの位置を通路に調整
+ ghosts.forEach(g=>{
+  if(isWall(g.x,g.y)){
+   const p=findOpenTile();
+   g.x=p.x;g.y=p.y;
+  }
  });
-}
-
-function setupStage(){
- randomMaze();
-
- let open=[];
- for(let y=1;y<H-1;y++){
-  for(let x=1;x<W-1;x++){
-   if(walk(x,y))open.push({x,y});
-  }
- }
-
- // プレイヤーのスタート位置
- let start={x:W-2,y:H-2};
- if(!walk(start.x,start.y)){
-  start=open[open.length-1];
- }
-
- // ゴーストの基地を中央付近に配置
- let center={x:Math.floor(W/2),y:Math.floor(H/2)};
- let ghostHome=open
-  .filter(p=>Math.abs(p.x-center.x)+Math.abs(p.y-center.y)<8)
-  .sort((a,b)=>
-   (Math.abs(a.x-center.x)+Math.abs(a.y-center.y))-
-   (Math.abs(b.x-center.x)+Math.abs(b.y-center.y))
-  )[0]||open[0];
-
- player={
-  x:start.x,y:start.y,
-  dir:{x:0,y:0},
-  alive:true
- };
-
- direction={x:0,y:0};
- nextDirection={x:0,y:0};
-
- ghosts=[];
- let colors=["#ff4242","#ff9bdb","#42e8f5","#ffae32"];
-
- for(let i=0;i<4;i++){
-  let candidates=open.filter(p=>
-   Math.abs(p.x-ghostHome.x)+Math.abs(p.y-ghostHome.y)>=i+1
-  );
-  let pos=candidates.find(p=>
-   !ghosts.some(g=>g.x===p.x&&g.y===p.y)
-  )||ghostHome;
-
-  ghosts.push({
-   x:pos.x,y:pos.y,
-   color:colors[i],
-   home:{x:pos.x,y:pos.y},
-   frightened:false,
-   name:i
-  });
- }
-
- dots=[];
- powers=[];
-
- for(let y=1;y<H-1;y++){
-  for(let x=1;x<W-1;x++){
-   if(!walk(x,y))continue;
-
-   let nearPlayer=Math.abs(x-start.x)+Math.abs(y-start.y);
-   let nearGhost=Math.abs(x-ghostHome.x)+Math.abs(y-ghostHome.y);
-
-   if(nearPlayer===0||nearGhost<2)continue;
-
-   dots.push({x,y});
-  }
- }
-
- let powerPositions=farthestFrom(start.x,start.y,4);
- for(let p of powerPositions){
-  if(p.x===start.x&&p.y===start.y)continue;
-  powers.push({x:p.x,y:p.y});
-  dots=dots.filter(d=>d.x!==p.x||d.y!==p.y);
- }
 
  powerTime=0;
 }
 
-function drawMaze(){
- ctx.fillStyle="#000";
- ctx.fillRect(0,0,canvas.width,canvas.height);
-
- for(let y=0;y<H;y++){
-  for(let x=0;x<W;x++){
-   if(maze[y][x]===1){
-    let px=x*T,py=y*T;
-    ctx.fillStyle="#071b68";
-    ctx.fillRect(px+1,py+1,T-2,T-2);
-
-    ctx.strokeStyle="#2469ff";
-    ctx.lineWidth=1.5;
-    ctx.strokeRect(px+2,py+2,T-4,T-4);
-   }
-  }
+function findOpenTile(){
+ for(let i=0;i<1000;i++){
+  const x=1+Math.floor(Math.random()*(COLS-2));
+  const y=1+Math.floor(Math.random()*(ROWS-2));
+  if(!isWall(x,y)&&!(x===1&&y===1))return{x,y};
  }
+ return{x:COLS-2,y:ROWS-2};
+}
 
- // ドット
- ctx.fillStyle="#ffe9bd";
- for(let d of dots){
-  ctx.beginPath();
-  ctx.arc(d.x*T+T/2,d.y*T+T/2,2.5,0,Math.PI*2);
-  ctx.fill();
- }
+function startGame(){
+ score=0;life=3;stage=1;
+ newStage();
+ running=true;paused=false;
+ message="";
+ updateStats();
+ lastTime=performance.now();
+ requestAnimationFrame(loop);
+}
 
- // パワーエサ
- for(let p of powers){
-  let pulse=1+Math.sin(tick*.009)*.22;
-  ctx.fillStyle="#fff";
-  ctx.shadowColor="#fff";
-  ctx.shadowBlur=12;
-  ctx.beginPath();
-  ctx.arc(p.x*T+T/2,p.y*T+T/2,6*pulse,0,Math.PI*2);
-  ctx.fill();
-  ctx.shadowBlur=0;
+function pauseGame(){
+ if(!running)return;
+ paused=!paused;
+ message=paused?"一時停止中":"";
+ if(!paused){
+  lastTime=performance.now();
+  requestAnimationFrame(loop);
  }
 }
 
-function drawPlayer(){
- if(!player)return;
- let px=player.x*T+T/2;
- let py=player.y*T+T/2;
-
- let angle=0;
- if(direction.x===-1)angle=Math.PI;
- if(direction.y===-1)angle=-Math.PI/2;
- if(direction.y===1)angle=Math.PI/2;
-
- let opening=.12+Math.abs(Math.sin(mouth))*.35;
-
- ctx.fillStyle="#ffe600";
- ctx.beginPath();
- ctx.moveTo(px,py);
- ctx.arc(px,py,10,angle+opening,angle+Math.PI*2-opening);
- ctx.closePath();
- ctx.fill();
-
- ctx.shadowColor="#ffdd00";
- ctx.shadowBlur=8;
- ctx.fill();
- ctx.shadowBlur=0;
+function updateStats(){
+ document.getElementById("score").textContent=score;
+ document.getElementById("life").textContent=life;
+ document.getElementById("stage").textContent=stage;
 }
 
-function drawGhost(g){
- let x=g.x*T+T/2;
- let y=g.y*T+T/2;
- let frightened=powerTime>0;
- let color=frightened?"#244bff":g.color;
-
- ctx.fillStyle=color;
- ctx.beginPath();
- ctx.arc(x,y-1,9,Math.PI,0);
- ctx.lineTo(x+9,y+9);
- ctx.lineTo(x+4,y+6);
- ctx.lineTo(x,y+10);
- ctx.lineTo(x-4,y+6);
- ctx.lineTo(x-9,y+9);
- ctx.closePath();
- ctx.fill();
-
- // 目
- ctx.fillStyle="white";
- ctx.beginPath();
- ctx.ellipse(x-3,y-1,3,4,0,0,Math.PI*2);
- ctx.ellipse(x+3,y-1,3,4,0,0,Math.PI*2);
- ctx.fill();
-
- ctx.fillStyle="#111";
- ctx.beginPath();
- ctx.arc(x-3,y,1.5,0,Math.PI*2);
- ctx.arc(x+3,y,1.5,0,Math.PI*2);
- ctx.fill();
-}
-
-function draw(){
- drawMaze();
- for(let g of ghosts)drawGhost(g);
- drawPlayer();
-}
-
-function setDir(x,y){
- nextDirection={x,y};
+function setDirection(d){
+ wanted={...dirs[d]};
 }
 
 document.addEventListener("keydown",e=>{
- let map={
-  ArrowUp:[0,-1],w:[0,-1],W:[0,-1],
-  ArrowDown:[0,1],s:[0,1],S:[0,1],
-  ArrowLeft:[-1,0],a:[-1,0],A:[-1,0],
-  ArrowRight:[1,0],d:[1,0],D:[1,0]
+ const k=e.key.toLowerCase();
+ const keys={
+  arrowup:"up",w:"up",
+  arrowdown:"down",s:"down",
+  arrowleft:"left",a:"left",
+  arrowright:"right",d:"right"
  };
- if(map[e.key]){
+ if(keys[k]){
   e.preventDefault();
-  setDir(...map[e.key]);
+  setDirection(keys[k]);
  }
- if(e.code==="Space"){
+ if(k===" "){
   e.preventDefault();
-  togglePause();
+  pauseGame();
  }
 });
 
-function movePlayer(){
- if(walk(player.x+nextDirection.x,player.y+nextDirection.y)){
-  direction={...nextDirection};
- }
-
- if(walk(player.x+direction.x,player.y+direction.y)){
-  player.x+=direction.x;
-  player.y+=direction.y;
- }
-
- // ドット回収
- let index=dots.findIndex(d=>d.x===player.x&&d.y===player.y);
- if(index!==-1){
-  dots.splice(index,1);
-  score+=10;
-  updateStats();
- }
-
- // パワーエサ
- let powerIndex=powers.findIndex(p=>p.x===player.x&&p.y===player.y);
- if(powerIndex!==-1){
-  powers.splice(powerIndex,1);
-  score+=50;
-  powerTime=6500;
-  updateStats();
- }
-
- if(dots.length===0&&powers.length===0){
-  nextStage();
- }
+for(const d of Object.keys(dirs)){
+ const btn=document.getElementById(d);
+ btn.addEventListener("pointerdown",e=>{
+  e.preventDefault();setDirection(d);
+ });
 }
 
-function findPath(sx,sy,tx,ty){
- let queue=[{x:sx,y:sy,first:null}];
- let visited=new Set([key(sx,sy)]);
+function canMove(x,y,d){
+ return !isWall(x+d.x,y+d.y);
+}
+
+function movePlayer(){
+ if(canMove(player.x,player.y,wanted)){
+  player.dir={...wanted};
+ }
+ if(canMove(player.x,player.y,player.dir)){
+  player.x+=player.dir.x;
+  player.y+=player.dir.y;
+ }
+
+ const i=pellets.findIndex(p=>p.x===player.x&&p.y===player.y);
+ if(i!==-1){
+  pellets.splice(i,1);
+  score+=10;
+ }
+
+ const pi=powerPellets.findIndex(p=>p.x===player.x&&p.y===player.y);
+ if(pi!==-1){
+  powerPellets.splice(pi,1);
+  score+=50;
+  powerTime=8;
+ }
+
+ if(pellets.length===0){
+  stage++;
+  newStage();
+  message="STAGE "+stage+"!";
+ }
+
+ updateStats();
+}
+
+function bfs(sx,sy,tx,ty){
+ const queue=[{x:sx,y:sy,first:null}];
+ const seen=new Set([sx+","+sy]);
 
  while(queue.length){
-  let p=queue.shift();
+  const p=queue.shift();
   if(p.x===tx&&p.y===ty)return p.first;
 
-  for(let d of dirs){
-   let x=p.x+d.x,y=p.y+d.y,k=key(x,y);
-   if(walk(x,y)&&!visited.has(k)){
-    visited.add(k);
+  for(const d of Object.values(dirs)){
+   const nx=p.x+d.x,ny=p.y+d.y;
+   const key=nx+","+ny;
+   if(!isWall(nx,ny)&&!seen.has(key)){
+    seen.add(key);
     queue.push({
-     x,y,
-     first:p.first||{x:d.x,y:d.y}
+     x:nx,y:ny,
+     first:p.first||d
     });
    }
   }
@@ -509,178 +356,192 @@ function findPath(sx,sy,tx,ty){
  return null;
 }
 
-function moveGhost(g){
- let frightened=powerTime>0;
- let options=dirs.filter(d=>walk(g.x+d.x,g.y+d.y));
- if(!options.length)return;
+function moveGhosts(){
+ for(const g of ghosts){
+  let target;
 
- let chosen;
+  if(powerTime>0){
+   target=bfs(g.x,g.y,g.home.x,g.home.y);
+   if(!target){
+    target={x:-wanted.x,y:-wanted.y};
+   }else{
+    target={x:-target.x,y:-target.y};
+   }
+  }else{
+   target=bfs(g.x,g.y,player.x,player.y);
+  }
 
- if(frightened&&Math.random()<.7){
-  // パワー中はプレイヤーから遠ざかる
-  options.sort((a,b)=>{
-   let da=Math.abs(g.x+a.x-player.x)+Math.abs(g.y+a.y-player.y);
-   let db=Math.abs(g.x+b.x-player.x)+Math.abs(g.y+b.y-player.y);
-   return db-da;
-  });
-  chosen=options[0];
- }else{
-  chosen=findPath(g.x,g.y,player.x,player.y);
-  if(!chosen||!options.some(d=>d.x===chosen.x&&d.y===chosen.y)){
-   chosen=options[Math.floor(Math.random()*options.length)];
+  if(target&&!isWall(g.x+target.x,g.y+target.y)){
+   g.x+=target.x;
+   g.y+=target.y;
   }
  }
-
- g.x+=chosen.x;
- g.y+=chosen.y;
 }
 
 function checkCollision(){
- for(let g of ghosts){
+ for(const g of ghosts){
   if(g.x===player.x&&g.y===player.y){
    if(powerTime>0){
     score+=200;
-    g.x=g.home.x;
-    g.y=g.home.y;
+    const p=findOpenTile();
+    g.x=p.x;g.y=p.y;
     updateStats();
    }else{
-    loseLife();
-    return;
+    life--;
+    updateStats();
+
+    if(life<=0){
+     running=false;
+     message="GAME OVER";
+     return;
+    }
+
+    player.x=1;player.y=1;
+    player.dir={x:0,y:0};
+    wanted={x:0,y:0};
+    message="気をつけて！";
    }
   }
  }
 }
 
-function loseLife(){
- lives--;
- updateStats();
-
- if(lives<=0){
-  endGame();
-  return;
- }
-
- // スタート位置に戻す
- let start={x:W-2,y:H-2};
- if(!walk(start.x,start.y)){
-  start=maze.flatMap((row,y)=>row.map((v,x)=>({x,y,v})))
-   .filter(p=>p.v===0).pop();
- }
-
- player.x=start.x;
- player.y=start.y;
- direction={x:0,y:0};
- nextDirection={x:0,y:0};
-
- ghosts.forEach(g=>{
-  g.x=g.home.x;
-  g.y=g.home.y;
- });
-
- powerTime=0;
-}
-
-function nextStage(){
- stage++;
- setupStage();
- updateStats();
-}
-
-function updateStats(){
- document.getElementById("score").textContent=score;
- document.getElementById("high").textContent=high;
- document.getElementById("lives").textContent=
-  "♥ ".repeat(Math.max(0,lives));
- document.getElementById("stage").textContent=stage;
-
- if(score>high){
-  high=score;
-  try{localStorage.setItem("pacmazeHigh",high)}catch(e){}
-  document.getElementById("high").textContent=high;
- }
-}
-
-function endGame(){
- running=false;
- gameOver=true;
- document.getElementById("message").style.display="flex";
- document.getElementById("message").innerHTML=`
-  <h2>GAME OVER</h2>
-  <p>FINAL SCORE<br>
-  <strong style="font-size:30px;color:#ffe600">${score}</strong><br>
-  STAGE ${stage}</p>
-  <button onclick="startGame()">RETRY</button>
- `;
-}
-
-function togglePause(){
- if(!running||gameOver)return;
- paused=!paused;
- if(paused){
-  document.getElementById("message").style.display="flex";
-  document.getElementById("message").innerHTML=
-  '<h2>PAUSED</h2><p>一時停止中</p><button onclick="togglePause()">CONTINUE</button>';
- }else{
-  document.getElementById("message").style.display="none";
- }
-}
-
-function startGame(){
- score=0;
- lives=3;
- stage=1;
- running=true;
- paused=false;
- gameOver=false;
- setupStage();
- updateStats();
- document.getElementById("message").style.display="none";
- lastTime=0;
- moveTimer=0;
- ghostTimer=0;
- cancelAnimationFrame(animation);
- animation=requestAnimationFrame(loop);
-}
-
-function loop(timestamp){
- animation=requestAnimationFrame(loop);
+function loop(time){
  if(!running||paused)return;
 
- if(!lastTime)lastTime=timestamp;
- let delta=Math.min(timestamp-lastTime,50);
- lastTime=timestamp;
- tick+=delta;
- mouth+=delta*.012;
+ const dt=Math.min((time-lastTime)/1000,.05);
+ lastTime=time;
 
- moveTimer+=delta;
- ghostTimer+=delta;
+ moveTimer+=dt;
+ ghostTimer+=dt;
 
- // プレイヤーの速度
- let playerSpeed=Math.max(85,125-(stage-1)*3);
-
- if(moveTimer>=playerSpeed){
+ if(moveTimer>.135){
   moveTimer=0;
   movePlayer();
   checkCollision();
  }
 
- // ゴーストの速度
- let ghostSpeed=Math.max(115,195-(stage-1)*3);
- if(ghostTimer>=ghostSpeed){
+ if(ghostTimer>.24){
   ghostTimer=0;
-  ghosts.forEach(g=>moveGhost(g));
+  moveGhosts();
   checkCollision();
  }
 
- if(powerTime>0){
-  powerTime-=delta;
-  if(powerTime<0)powerTime=0;
- }
+ if(powerTime>0)powerTime-=dt;
 
  draw();
+
+ if(running)requestAnimationFrame(loop);
 }
 
-setupStage();
+function draw(){
+ ctx.fillStyle="#000";
+ ctx.fillRect(0,0,W,H);
+
+ // 迷路
+ for(let y=0;y<ROWS;y++){
+  for(let x=0;x<COLS;x++){
+   if(map[y][x]===1){
+    ctx.fillStyle="#101b80";
+    ctx.fillRect(x*SIZE,y*SIZE,SIZE,SIZE);
+    ctx.strokeStyle="#526cff";
+    ctx.lineWidth=1;
+    ctx.strokeRect(x*SIZE+2,y*SIZE+2,SIZE-4,SIZE-4);
+   }
+  }
+ }
+
+ // ドット
+ ctx.fillStyle="#ffe9b0";
+ for(const p of pellets){
+  ctx.beginPath();
+  ctx.arc(p.x*SIZE+SIZE/2,p.y*SIZE+SIZE/2,3,0,Math.PI*2);
+  ctx.fill();
+ }
+
+ // パワーエサ
+ for(const p of powerPellets){
+  ctx.fillStyle="#fff";
+  ctx.shadowColor="#fff";
+  ctx.shadowBlur=15;
+  ctx.beginPath();
+  ctx.arc(p.x*SIZE+SIZE/2,p.y*SIZE+SIZE/2,7,0,Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur=0;
+ }
+
+ // ゴースト
+ for(const g of ghosts){
+  drawGhost(g);
+ }
+
+ // パックマン
+ drawPlayer();
+
+ if(powerTime>0){
+  ctx.fillStyle="#7dfcff";
+  ctx.font="bold 15px Arial";
+  ctx.fillText("POWER!",10,20);
+ }
+
+ if(message){
+  ctx.fillStyle="#ffe600";
+  ctx.font="bold 25px Arial";
+  ctx.textAlign="center";
+  ctx.fillText(message,W/2,H/2);
+  ctx.textAlign="left";
+ }
+}
+
+function drawPlayer(){
+ const cx=player.x*SIZE+SIZE/2;
+ const cy=player.y*SIZE+SIZE/2;
+ const angle=Math.atan2(player.dir.y,player.dir.x);
+ const mouth=.25+Math.abs(Math.sin(Date.now()/80))*.25;
+
+ ctx.fillStyle="#ffe600";
+ ctx.beginPath();
+ ctx.moveTo(cx,cy);
+ ctx.arc(cx,cy,SIZE*.43,angle+mouth,angle+Math.PI*2-mouth);
+ ctx.closePath();
+ ctx.fill();
+}
+
+function drawGhost(g){
+ const x=g.x*SIZE+SIZE/2;
+ const y=g.y*SIZE+SIZE/2;
+ const r=SIZE*.4;
+
+ ctx.fillStyle=powerTime>0?"#315aff":g.color;
+ ctx.beginPath();
+ ctx.arc(x,y-r*.15,r,Math.PI,0);
+ ctx.lineTo(x+r,y+r);
+ ctx.lineTo(x+r*.5,y+r*.65);
+ ctx.lineTo(x,y+r);
+ ctx.lineTo(x-r*.5,y+r*.65);
+ ctx.lineTo(x-r,y+r);
+ ctx.closePath();
+ ctx.fill();
+
+ // 目
+ ctx.fillStyle="white";
+ ctx.beginPath();
+ ctx.arc(x-r*.35,y-r*.1,r*.22,0,Math.PI*2);
+ ctx.arc(x+r*.35,y-r*.1,r*.22,0,Math.PI*2);
+ ctx.fill();
+
+ ctx.fillStyle="#111";
+ ctx.beginPath();
+ ctx.arc(x-r*.35,y-r*.1,r*.1,0,Math.PI*2);
+ ctx.arc(x+r*.35,y-r*.1,r*.1,0,Math.PI*2);
+ ctx.fill();
+}
+
+// 初期画面
+makeMaze();
+player={x:1,y:1,dir:{x:0,y:0}};
+ghosts=[];
+pellets=[];
+powerPellets=[];
 draw();
 </script>
 </body>

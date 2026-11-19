@@ -7,22 +7,23 @@
 <title>PAC-MAZE</title>
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:#080b20;color:#fff;font-family:Arial,sans-serif;text-align:center;overscroll-behavior:none}
-body{overflow-x:hidden;touch-action:pan-y}
+html,body{margin:0;background:#080b20;color:white;text-align:center;font-family:Arial,sans-serif;overscroll-behavior:none}
+body{overflow-x:hidden}
 h1{color:#ffe600;letter-spacing:5px;text-shadow:0 0 15px #ffe600;margin:16px 0 8px}
-#stats{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin:10px}
-.stat{font-size:15px}.stat b{color:#ffe600}
-#game{width:min(94vw,650px);height:auto;aspect-ratio:1;display:block;margin:10px auto;background:#000;border:3px solid #344cff;border-radius:10px;box-shadow:0 0 24px #263bff66;touch-action:none}
+#stats{display:flex;justify-content:center;gap:22px;flex-wrap:wrap;margin:12px}
+.stat b{color:#ffe600}
+#game{width:min(94vw,650px);height:auto;aspect-ratio:1;display:block;margin:10px auto;background:#000;border:3px solid #344cff;border-radius:10px;touch-action:none}
 #message{min-height:28px;color:#ffe600;font-weight:bold;margin:8px}
-button{background:#293fff;color:#fff;border:0;border-radius:10px;padding:11px 19px;font-size:15px;font-weight:bold;margin:5px;cursor:pointer;touch-action:manipulation}
-button:active{transform:scale(.96)}
+button{background:#293fff;color:white;border:0;border-radius:10px;padding:11px 18px;font-size:15px;font-weight:bold;margin:5px;cursor:pointer;touch-action:none}
 #controls{display:grid;grid-template-columns:60px 60px 60px;grid-template-rows:52px 52px;justify-content:center;gap:5px;margin:12px auto}
-#controls button{padding:0;font-size:23px;touch-action:none}
-#up{grid-column:2;grid-row:1}#left{grid-column:1;grid-row:2}#down{grid-column:2;grid-row:2}#right{grid-column:3;grid-row:2}
+#controls button{padding:0;font-size:23px}
+#up{grid-column:2;grid-row:1}
+#left{grid-column:1;grid-row:2}
+#down{grid-column:2;grid-row:2}
+#right{grid-column:3;grid-row:2}
 #savebox{width:min(94vw,650px);margin:18px auto 28px;padding:14px;background:#111936;border:1px solid #344cff;border-radius:12px}
-#savebox h2{font-size:18px;margin:2px 0 10px;color:#ffe600}
-#savecode{width:100%;height:76px;resize:vertical;background:#070d25;color:#dce5ff;border:1px solid #5366d8;border-radius:8px;padding:9px;font-size:12px}
-#savebox small{display:block;color:#aab2df;margin:8px}
+#savebox h2{font-size:18px;color:#ffe600}
+#savecode{width:100%;height:76px;background:#070d25;color:white;border:1px solid #5366d8;border-radius:8px;padding:9px}
 small{color:#aab2df}
 </style>
 </head>
@@ -34,264 +35,581 @@ small{color:#aab2df}
  <div class="stat">STAGE <b id="stage">1</b></div>
 </div>
 <canvas id="game" width="600" height="600"></canvas>
-<div id="message">スタートを押して冒険開始！</div>
+<div id="message">STARTを押してね！</div>
 <button id="start">▶ START / NEW GAME</button>
 <button id="pause">Ⅱ PAUSE</button>
 <div id="controls">
- <button id="up">▲</button><button id="left">◀</button>
- <button id="down">▼</button><button id="right">▶</button>
+ <button id="up">▲</button>
+ <button id="left">◀</button>
+ <button id="down">▼</button>
+ <button id="right">▶</button>
 </div>
-<small>矢印キー / WASD / タッチ操作　・　画面はスクロールしません</small>
+<small>矢印キー / WASD / 画面ボタンで操作</small>
 <div id="savebox">
  <h2>セーブ・引き継ぎ</h2>
- <textarea id="savecode" placeholder="ここに引き継ぎコードを貼り付け"></textarea>
+ <textarea id="savecode" placeholder="引き継ぎコードを貼り付け"></textarea>
  <div>
   <button id="copy">コードをコピー</button>
   <button id="load">コードを読み込む</button>
  </div>
- <small>現在のスコア・残機・ステージ・迷路の状態を保存できます。</small>
 </div>
+
 <script>
 "use strict";
-const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
-const COLS=25,ROWS=25,SIZE=24,W=600,H=600;
-const dirs={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
-let map=[],pellets=[],powerPellets=[],player=null,ghosts=[];
-let score=0,life=3,stage=1,powerTime=0,running=false,paused=false;
-let lastTime=0,ghostThink=0,notice="",noticeTime=0,raf=0;
-function wrap(v,max){return (v%max+max)%max}
-function isWall(x,y){return map[wrap(y,ROWS)][wrap(x,COLS)]===1}
-function centered(a){return Math.abs(a-Math.floor(a)-.5)<.12}
+
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const N=25,S=24;
+const directions=[
+ {x:0,y:-1,name:"up"},
+ {x:0,y:1,name:"down"},
+ {x:-1,y:0,name:"left"},
+ {x:1,y:0,name:"right"}
+];
+
+let map=[],pellets=[],powerPellets=[];
+let player=null,ghosts=[];
+let score=0,life=3,stage=1,powerTime=0;
+let running=false,paused=false;
+let lastTime=0,raf=0;
+let messageTime=0;
+
+function wrap(v){return (v+N)%N}
+function wall(x,y){return map[wrap(y)][wrap(x)]===1}
+
 function makeMaze(){
- map=Array.from({length:ROWS},()=>Array(COLS).fill(1));
- const stack=[{x:1,y:1}],seen=new Set(["1,1"]);map[1][1]=0;
+ map=Array.from({length:N},()=>Array(N).fill(1));
+
+ // 迷路を1マス幅の通路で生成
+ const visited=new Set();
+ const stack=[{x:1,y:1}];
+ map[1][1]=0;
+ visited.add("1,1");
+
  while(stack.length){
-  const p=stack[stack.length-1],choices=[];
-  for(const d of Object.values(dirs)){
-   const nx=p.x+d.x*2,ny=p.y+d.y*2,k=nx+","+ny;
-   if(nx>0&&nx<COLS-1&&ny>0&&ny<ROWS-1&&!seen.has(k))choices.push({x:nx,y:ny,dx:d.x,dy:d.y});
+  const p=stack[stack.length-1];
+  const choices=[];
+
+  for(const d of directions){
+   const x=p.x+d.x*2;
+   const y=p.y+d.y*2;
+   const key=x+","+y;
+
+   if(x>0&&x<N-1&&y>0&&y<N-1&&!visited.has(key)){
+    choices.push({x,y,dx:d.x,dy:d.y});
+   }
   }
+
   if(choices.length){
    const c=choices[Math.floor(Math.random()*choices.length)];
-   map[p.y+c.dy][p.x+c.dx]=0;map[c.y][c.x]=0;
-   seen.add(c.x+","+c.y);stack.push({x:c.x,y:c.y});
-  }else stack.pop();
+   map[p.y+c.dy][p.x+c.dx]=0;
+   map[c.y][c.x]=0;
+   visited.add(c.x+","+c.y);
+   stack.push({x:c.x,y:c.y});
+  }else{
+   stack.pop();
+  }
  }
- for(let i=0;i<190;i++){
-  const x=1+Math.floor(Math.random()*(COLS-2)),y=1+Math.floor(Math.random()*(ROWS-2));
-  if(map[y][x]===1)map[y][x]=0;
+
+ // 左右・上下をつなぐ1マス幅の通路
+ for(let x=0;x<N;x++)map[12][x]=0;
+ for(let y=0;y<N;y++)map[y][12]=0;
+
+ // 外周は中央の出入口だけ開ける
+ for(let i=0;i<N;i++){
+  if(i!==12){
+   map[0][i]=1;
+   map[N-1][i]=1;
+   map[i][0]=1;
+   map[i][N-1]=1;
+  }
  }
- for(let pass=0;pass<3;pass++){
-  for(let y=1;y<ROWS-1;y++)for(let x=1;x<COLS-1;x++){
-   if(map[y][x]!==0)continue;
-   let open=0;
-   for(const d of Object.values(dirs))if(!isWall(x+d.x,y+d.y))open++;
-   if(open===1&&Math.random()<.88){
-    const walls=Object.values(dirs).filter(d=>map[y+d.y]?.[x+d.x]===1);
-    if(walls.length){const d=walls[Math.floor(Math.random()*walls.length)];map[y+d.y][x+d.x]=0}
+ map[12][0]=0;
+ map[12][N-1]=0;
+ map[0][12]=0;
+ map[N-1][12]=0;
+}
+
+function makeActor(x,y){
+ return {
+  tx:x,ty:y,progress:0,
+  dir:{x:0,y:0},
+  next:{x:0,y:0}
+ };
+}
+
+function canMove(x,y,d){
+ return !wall(x+d.x,y+d.y);
+}
+
+function randomOpen(minDistance=0){
+ const choices=[];
+ for(let y=1;y<N-1;y++){
+  for(let x=1;x<N-1;x++){
+   if(!wall(x,y)&&Math.abs(x-1)+Math.abs(y-1)>minDistance){
+    choices.push({x,y});
    }
   }
  }
- // 四辺を通路にして上下左右をつなぐ
- for(let x=0;x<COLS;x++){map[0][x]=0;map[ROWS-1][x]=0}
- for(let y=0;y<ROWS;y++){map[y][0]=0;map[y][COLS-1]=0}
- for(let y=1;y<=4;y++)for(let x=1;x<=4;x++)map[y][x]=0;
- for(let y=ROWS-5;y<ROWS-1;y++)for(let x=COLS-5;x<COLS-1;x++)map[y][x]=0;
+ return choices[Math.floor(Math.random()*choices.length)]||{x:12,y:12};
 }
-function openSpot(){
- for(let i=0;i<2000;i++){
-  const x=1+Math.floor(Math.random()*(COLS-2)),y=1+Math.floor(Math.random()*(ROWS-2));
-  if(!isWall(x,y))return{x,y};
- }
- return{x:COLS-2,y:ROWS-2};
-}
+
 function newStage(){
- makeMaze();player={x:1.5,y:1.5,dir:{x:0,y:0},next:{x:0,y:0}};
- pellets=[];powerPellets=[];
- for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
-  if(!isWall(x,y)&&!(x===1&&y===1))pellets.push({x,y});
+ makeMaze();
+ player=makeActor(1,1);
+ pellets=[];
+ powerPellets=[];
+
+ for(let y=0;y<N;y++){
+  for(let x=0;x<N;x++){
+   if(!wall(x,y)&&!(x===1&&y===1)){
+    pellets.push({x,y});
+   }
+  }
  }
- const corners=[{x:1,y:ROWS-2},{x:COLS-2,y:1},{x:COLS-2,y:ROWS-2},{x:12,y:12}];
- for(const p of corners)if(!isWall(p.x,p.y)){
-  powerPellets.push(p);pellets=pellets.filter(a=>a.x!==p.x||a.y!==p.y);
+
+ const powerSpots=[
+  {x:1,y:23},{x:23,y:1},
+  {x:23,y:23},{x:12,y:12}
+ ];
+
+ for(const p of powerSpots){
+  if(!wall(p.x,p.y)){
+   powerPellets.push({...p});
+   pellets=pellets.filter(a=>a.x!==p.x||a.y!==p.y);
+  }
  }
+
  const colors=["#ff3030","#ff8de1","#00eaff","#ff9b25"];
  ghosts=colors.map((color,i)=>{
-  const p=[{x:COLS-2,y:ROWS-2},{x:COLS-2,y:ROWS-3},{x:COLS-3,y:ROWS-2},{x:COLS-3,y:ROWS-3}][i];
-  return{x:p.x+.5,y:p.y+.5,dir:{x:0,y:0},color,home:{x:p.x+.5,y:p.y+.5}};
+  const p=randomOpen(12);
+  return {
+   ...makeActor(p.x,p.y),
+   color,
+   home:{x:p.x,y:p.y}
+  };
  });
- powerTime=0;ghostThink=0;
+
+ powerTime=0;
 }
-function updateStats(){
+
+function stats(){
  document.getElementById("score").textContent=score;
  document.getElementById("life").textContent=life;
  document.getElementById("stage").textContent=stage;
 }
-function say(s,t=1.5){notice=s;noticeTime=t;document.getElementById("message").textContent=s}
+
+function say(text,seconds=2){
+ document.getElementById("message").textContent=text;
+ messageTime=seconds;
+}
+
 function startGame(){
- cancelAnimationFrame(raf);score=0;life=3;stage=1;newStage();running=true;paused=false;
- updateStats();say("STAGE 1 — スタート！");lastTime=performance.now();raf=requestAnimationFrame(loop);
+ cancelAnimationFrame(raf);
+ score=0;life=3;stage=1;
+ newStage();
+ running=true;paused=false;
+ stats();
+ say("STAGE 1 — START!");
+ lastTime=performance.now();
+ draw();
+ raf=requestAnimationFrame(loop);
 }
+
 function pauseGame(){
- if(!running)return;paused=!paused;
- if(paused){say("一時停止中",999);cancelAnimationFrame(raf)}
- else{say("再開！");lastTime=performance.now();raf=requestAnimationFrame(loop)}
+ if(!running)return;
+ paused=!paused;
+ if(paused){
+  say("一時停止中",999);
+  cancelAnimationFrame(raf);
+ }else{
+  say("再開！");
+  lastTime=performance.now();
+  raf=requestAnimationFrame(loop);
+ }
 }
-function setDirection(name){if(player)player.next={...dirs[name]}}
+
+function setDirection(name){
+ if(!player)return;
+ const d=directions.find(v=>v.name===name);
+ if(d)player.next={x:d.x,y:d.y};
+}
+
 document.addEventListener("keydown",e=>{
- const k=e.key.toLowerCase(),keys={arrowup:"up",w:"up",arrowdown:"down",s:"down",arrowleft:"left",a:"left",arrowright:"right",d:"right"};
- if(keys[k]){e.preventDefault();setDirection(keys[k])}
- if(k===" "){e.preventDefault();pauseGame()}
+ const k=e.key.toLowerCase();
+ const keys={
+  arrowup:"up",w:"up",
+  arrowdown:"down",s:"down",
+  arrowleft:"left",a:"left",
+  arrowright:"right",d:"right"
+ };
+ if(keys[k]){
+  e.preventDefault();
+  setDirection(keys[k]);
+ }
+ if(k===" "){
+  e.preventDefault();
+  pauseGame();
+ }
 },{passive:false});
-window.addEventListener("keydown",e=>{
- if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault()
-},{passive:false});
-for(const name of Object.keys(dirs)){
- document.getElementById(name).addEventListener("pointerdown",e=>{e.preventDefault();setDirection(name)});
+
+for(const d of directions){
+ const button=document.getElementById(d.name);
+ button.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  setDirection(d.name);
+ });
 }
+
 document.getElementById("start").onclick=startGame;
 document.getElementById("pause").onclick=pauseGame;
-function canStep(x,y,d){return !isWall(Math.floor(x+d.x*.18),Math.floor(y+d.y*.18))}
-function moveActor(a,distance,isPlayer=false){
- let left=distance,guard=0;
- while(left>0.0001&&guard++<8){
-  if(centered(a.x)&&centered(a.y)){
-   a.x=Math.floor(a.x)+.5;a.y=Math.floor(a.y)+.5;
-   if(isPlayer&&canStep(a.x,a.y,a.next))a.dir={...a.next};
-   if(!canStep(a.x,a.y,a.dir)){a.dir={x:0,y:0};break}
+
+// タイル単位で移動するので壁に入り込まない
+function moveActor(a,speed,dt,isPlayer=false){
+ let remaining=speed*dt;
+ let guard=0;
+
+ while(remaining>0&&guard++<5){
+  if(a.progress<0.0001){
+   a.progress=0;
+
+   if(isPlayer&&canMove(a.tx,a.ty,a.next)){
+    a.dir={...a.next};
+   }
+
+   if(!canMove(a.tx,a.ty,a.dir)){
+    a.dir={x:0,y:0};
+    break;
+   }
   }
-  const step=Math.min(left,.08);
-  a.x=wrap(a.x+a.dir.x*step,COLS);
-  a.y=wrap(a.y+a.dir.y*step,ROWS);
-  left-=step;
+
+  const amount=Math.min(remaining,1-a.progress);
+  a.progress+=amount;
+  remaining-=amount;
+
+  if(a.progress>=0.99999){
+   a.tx=wrap(a.tx+a.dir.x);
+   a.ty=wrap(a.ty+a.dir.y);
+   a.progress=0;
+  }
  }
 }
+
+function actorPosition(a){
+ return {
+  x:a.tx+.5+a.dir.x*a.progress,
+  y:a.ty+.5+a.dir.y*a.progress
+ };
+}
+
 function collect(){
- const x=wrap(Math.floor(player.x),COLS),y=wrap(Math.floor(player.y),ROWS);
+ const x=player.tx,y=player.ty;
  const i=pellets.findIndex(p=>p.x===x&&p.y===y);
- if(i>=0){pellets.splice(i,1);score+=10}
- const j=powerPellets.findIndex(p=>p.x===x&&p.y===y);
- if(j>=0){powerPellets.splice(j,1);score+=50;powerTime=8;say("パワーアップ！")}
- if(pellets.length===0&&powerPellets.length===0){
-  stage++;newStage();say("STAGE "+stage+" CLEAR!",2.2);
+
+ if(i>=0){
+  pellets.splice(i,1);
+  score+=10;
  }
- updateStats();
+
+ const j=powerPellets.findIndex(p=>p.x===x&&p.y===y);
+ if(j>=0){
+  powerPellets.splice(j,1);
+  score+=50;
+  powerTime=8;
+  say("パワーアップ！");
+ }
+
+ if(pellets.length===0&&powerPellets.length===0){
+  stage++;
+  newStage();
+  say("STAGE "+stage+" CLEAR！");
+ }
+ stats();
 }
-function bfs(sx,sy,tx,ty){
- sx=wrap(sx,COLS);sy=wrap(sy,ROWS);tx=wrap(tx,COLS);ty=wrap(ty,ROWS);
- const q=[{x:sx,y:sy,first:null}],seen=new Set([sx+","+sy]);
- for(let i=0;i<q.length;i++){
-  const p=q[i];if(p.x===tx&&p.y===ty)return p.first;
-  for(const d of Object.values(dirs)){
-   const nx=wrap(p.x+d.x,COLS),ny=wrap(p.y+d.y,ROWS),key=nx+","+ny;
-   if(!isWall(nx,ny)&&!seen.has(key)){seen.add(key);q.push({x:nx,y:ny,first:p.first||d})}
+
+function findPath(sx,sy,tx,ty){
+ const queue=[{x:sx,y:sy,first:null}];
+ const seen=new Set([sx+","+sy]);
+
+ for(let i=0;i<queue.length;i++){
+  const p=queue[i];
+
+  if(p.x===tx&&p.y===ty)return p.first;
+
+  for(const d of directions){
+   const x=wrap(p.x+d.x);
+   const y=wrap(p.y+d.y);
+   const key=x+","+y;
+
+   if(!wall(x,y)&&!seen.has(key)){
+    seen.add(key);
+    queue.push({
+     x,y,
+     first:p.first||{x:d.x,y:d.y}
+    });
+   }
   }
  }
  return null;
 }
+
 function moveGhosts(dt){
- const base=Math.min(2.25,.72+(stage-1)*.13);
+ const speed=Math.min(2.5,.65+(stage-1)*.12);
+
  for(const g of ghosts){
-  if(centered(g.x)&&centered(g.y)){
-   const gx=Math.floor(g.x),gy=Math.floor(g.y);
+  if(g.progress===0){
    let d;
+
    if(powerTime>0){
-    d=bfs(gx,gy,Math.floor(g.home.x),Math.floor(g.home.y));
-    if(d)d={x:-d.x,y:-d.y};
-   }else d=bfs(gx,gy,Math.floor(player.x),Math.floor(player.y));
-   if(d&&canStep(g.x,g.y,d))g.dir=d;
-   else if(!canStep(g.x,g.y,g.dir)){
-    const options=Object.values(dirs).filter(v=>canStep(g.x,g.y,v));
-    if(options.length)g.dir=options[Math.floor(Math.random()*options.length)];
-   }
-  }
-  moveActor(g,base*dt);
- }
-}
-function collision(){
- for(const g of ghosts){
-  const dx=Math.abs(g.x-player.x),dy=Math.abs(g.y-player.y);
-  if(Math.min(dx,COLS-dx)<.48&&Math.min(dy,ROWS-dy)<.48){
-   if(powerTime>0){
-    score+=200;const p=openSpot();g.x=p.x+.5;g.y=p.y+.5;updateStats();
+    const choices=directions.filter(v=>canMove(g.tx,g.ty,v));
+    if(choices.length){
+     d=choices[Math.floor(Math.random()*choices.length)];
+    }
    }else{
-    life--;updateStats();
-    if(life<=0){running=false;say("GAME OVER — STARTで再挑戦",999);return}
-    player.x=1.5;player.y=1.5;player.dir={x:0,y:0};player.next={x:0,y:0};
-    ghosts.forEach(g=>{g.x=g.home.x;g.y=g.home.y;g.dir={x:0,y:0}});
-    say("気をつけて！ 残り "+life+" LIFE");
+    d=findPath(g.tx,g.ty,player.tx,player.ty);
+   }
+
+   if(d&&canMove(g.tx,g.ty,d)){
+    g.dir={x:d.x,y:d.y};
+   }else if(!canMove(g.tx,g.ty,g.dir)){
+    g.dir={x:0,y:0};
+   }
+  }
+
+  moveActor(g,speed,dt,false);
+ }
+}
+
+function collision(){
+ const p=actorPosition(player);
+
+ for(const g of ghosts){
+  const q=actorPosition(g);
+  let dx=Math.abs(p.x-q.x);
+  let dy=Math.abs(p.y-q.y);
+  dx=Math.min(dx,N-dx);
+  dy=Math.min(dy,N-dy);
+
+  if(dx<.55&&dy<.55){
+   if(powerTime>0){
+    score+=200;
+    const spot=randomOpen(10);
+    g.tx=spot.x;g.ty=spot.y;
+    g.progress=0;g.dir={x:0,y:0};
+    stats();
+   }else{
+    life--;
+    stats();
+
+    if(life<=0){
+     running=false;
+     say("GAME OVER — STARTで再挑戦",999);
+     return;
+    }
+
+    player=makeActor(1,1);
+    ghosts.forEach(g=>{
+     const p=randomOpen(12);
+     g.tx=p.x;g.ty=p.y;
+     g.progress=0;g.dir={x:0,y:0};
+    });
+    say("残り "+life+" LIFE！");
+    return;
    }
   }
  }
 }
+
 function loop(now){
  if(!running||paused)return;
- const dt=Math.min((now-lastTime)/1000,.04);lastTime=now;
- moveActor(player,5.2*dt,true);collect();
- ghostThink+=dt;
- if(ghostThink>.22){ghostThink=0;moveGhosts(.22)}
+
+ const dt=Math.min((now-lastTime)/1000,.04);
+ lastTime=now;
+
+ moveActor(player,5.5,dt,true);
+ collect();
+ moveGhosts(dt);
+
  if(powerTime>0)powerTime=Math.max(0,powerTime-dt);
+
  collision();
- if(noticeTime>0){noticeTime-=dt;if(noticeTime<=0)document.getElementById("message").textContent=""}
- draw();if(running)raf=requestAnimationFrame(loop);
+
+ if(messageTime>0&&messageTime<900){
+  messageTime-=dt;
+  if(messageTime<=0){
+   document.getElementById("message").textContent="";
+  }
+ }
+
+ draw();
+
+ if(running)raf=requestAnimationFrame(loop);
 }
+
 function draw(){
- ctx.fillStyle="#02030a";ctx.fillRect(0,0,W,H);
- for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(map[y][x]===1){
-  ctx.fillStyle="#101b80";ctx.fillRect(x*SIZE,y*SIZE,SIZE,SIZE);
-  ctx.strokeStyle="#526cff";ctx.lineWidth=1;ctx.strokeRect(x*SIZE+2,y*SIZE+2,SIZE-4,SIZE-4);
+ ctx.fillStyle="#02030a";
+ ctx.fillRect(0,0,600,600);
+
+ // 壁
+ for(let y=0;y<N;y++){
+  for(let x=0;x<N;x++){
+   if(map[y][x]===1){
+    ctx.fillStyle="#101b80";
+    ctx.fillRect(x*S,y*S,S,S);
+    ctx.strokeStyle="#526cff";
+    ctx.lineWidth=1;
+    ctx.strokeRect(x*S+2,y*S+2,S-4,S-4);
+   }
+  }
  }
+
+ // 通常エサ
  ctx.fillStyle="#ffe9b0";
- for(const p of pellets){ctx.beginPath();ctx.arc(p.x*SIZE+12,p.y*SIZE+12,2.8,0,Math.PI*2);ctx.fill()}
- for(const p of powerPellets){
-  ctx.fillStyle="#fff";ctx.shadowColor="#fff";ctx.shadowBlur=13;
-  ctx.beginPath();ctx.arc(p.x*SIZE+12,p.y*SIZE+12,7,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+ for(const p of pellets){
+  ctx.beginPath();
+  ctx.arc(p.x*S+12,p.y*S+12,2.8,0,Math.PI*2);
+  ctx.fill();
  }
- ghosts.forEach(drawGhost);drawPlayer();
- if(powerTime>0){ctx.fillStyle="#7dfcff";ctx.font="bold 15px Arial";ctx.fillText("POWER!",10,20)}
- ctx.fillStyle="#ffe600";ctx.font="bold 14px Arial";ctx.fillText("STAGE "+stage,W-90,20);
+
+ // パワーエサ
+ for(const p of powerPellets){
+  ctx.fillStyle="#fff";
+  ctx.shadowColor="#fff";
+  ctx.shadowBlur=13;
+  ctx.beginPath();
+  ctx.arc(p.x*S+12,p.y*S+12,7,0,Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur=0;
+ }
+
+ ghosts.forEach(drawGhost);
+ drawPlayer();
+
+ if(powerTime>0){
+  ctx.fillStyle="#7dfcff";
+  ctx.font="bold 15px Arial";
+  ctx.fillText("POWER!",10,20);
+ }
+
+ ctx.fillStyle="#ffe600";
+ ctx.font="bold 14px Arial";
+ ctx.fillText("STAGE "+stage,500,20);
 }
+
 function drawPlayer(){
- const px=player.x*SIZE,py=player.y*SIZE,angle=Math.atan2(player.dir.y,player.dir.x);
- const mouth=.16+Math.abs(Math.sin(performance.now()/75))*.28;
- ctx.fillStyle="#ffe600";ctx.beginPath();ctx.moveTo(px,py);
- ctx.arc(px,py,SIZE*.44,angle+mouth,angle+Math.PI*2-mouth);ctx.closePath();ctx.fill();
+ const p=actorPosition(player);
+ const x=p.x*S,y=p.y*S;
+ const angle=Math.atan2(player.dir.y,player.dir.x);
+ const mouth=.15+Math.abs(Math.sin(performance.now()/75))*.28;
+
+ ctx.fillStyle="#ffe600";
+ ctx.beginPath();
+ ctx.moveTo(x,y);
+ ctx.arc(x,y,S*.44,angle+mouth,angle+Math.PI*2-mouth);
+ ctx.closePath();
+ ctx.fill();
 }
+
 function drawGhost(g){
- const x=g.x*SIZE,y=g.y*SIZE,r=SIZE*.4;
- ctx.fillStyle=powerTime>0?"#315aff":g.color;ctx.beginPath();ctx.arc(x,y-r*.15,r,Math.PI,0);
- ctx.lineTo(x+r,y+r);ctx.lineTo(x+r*.5,y+r*.65);ctx.lineTo(x,y+r);ctx.lineTo(x-r*.5,y+r*.65);ctx.lineTo(x-r,y+r);ctx.closePath();ctx.fill();
- ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(x-r*.35,y-r*.1,r*.22,0,Math.PI*2);ctx.arc(x+r*.35,y-r*.1,r*.22,0,Math.PI*2);ctx.fill();
- ctx.fillStyle="#111";ctx.beginPath();ctx.arc(x-r*.35,y-r*.1,r*.1,0,Math.PI*2);ctx.arc(x+r*.35,y-r*.1,r*.1,0,Math.PI*2);ctx.fill();
+ const p=actorPosition(g);
+ const x=p.x*S,y=p.y*S,r=S*.4;
+
+ ctx.fillStyle=powerTime>0?"#315aff":g.color;
+ ctx.beginPath();
+ ctx.arc(x,y-r*.15,r,Math.PI,0);
+ ctx.lineTo(x+r,y+r);
+ ctx.lineTo(x+r*.5,y+r*.65);
+ ctx.lineTo(x,y+r);
+ ctx.lineTo(x-r*.5,y+r*.65);
+ ctx.lineTo(x-r,y+r);
+ ctx.closePath();
+ ctx.fill();
+
+ ctx.fillStyle="white";
+ ctx.beginPath();
+ ctx.arc(x-r*.35,y-r*.1,r*.22,0,Math.PI*2);
+ ctx.arc(x+r*.35,y-r*.1,r*.22,0,Math.PI*2);
+ ctx.fill();
+
+ ctx.fillStyle="#111";
+ ctx.beginPath();
+ ctx.arc(x-r*.35,y-r*.1,r*.1,0,Math.PI*2);
+ ctx.arc(x+r*.35,y-r*.1,r*.1,0,Math.PI*2);
+ ctx.fill();
 }
-function encodeSave(obj){
- const bytes=new TextEncoder().encode(JSON.stringify(obj));let binary="";
+
+// 引き継ぎコード
+function encode(data){
+ const bytes=new TextEncoder().encode(JSON.stringify(data));
+ let binary="";
  bytes.forEach(b=>binary+=String.fromCharCode(b));
  return btoa(binary);
 }
-function decodeSave(code){
- const binary=atob(code.trim()),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+
+function decode(code){
+ const binary=atob(code.trim());
+ const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
  return JSON.parse(new TextDecoder().decode(bytes));
 }
-function saveData(){return{version:2,score,life,stage,map,pellets,powerPellets,player,ghosts,powerTime}}
+
 document.getElementById("copy").onclick=async()=>{
- if(!player){say("先にゲームを開始してください");return}
- const code=encodeSave(saveData());document.getElementById("savecode").value=code;
- try{await navigator.clipboard.writeText(code);say("引き継ぎコードをコピーしました！")}
- catch(e){document.getElementById("savecode").select();say("コードを選択しました。コピーしてください")}
+ if(!player){
+  say("先にゲームを開始してね");
+  return;
+ }
+
+ const data={
+  version:3,score,life,stage,map,pellets,powerPellets,
+  player,ghosts,powerTime
+ };
+
+ const code=encode(data);
+ document.getElementById("savecode").value=code;
+
+ try{
+  await navigator.clipboard.writeText(code);
+  say("引き継ぎコードをコピーしたよ！");
+ }catch(e){
+  document.getElementById("savecode").select();
+  say("コードを選択したよ。コピーしてね");
+ }
 };
+
 document.getElementById("load").onclick=()=>{
  try{
-  const d=decodeSave(document.getElementById("savecode").value);
-  if(d.version!==2||!Array.isArray(d.map)||d.map.length!==ROWS||!d.player||!Array.isArray(d.ghosts))throw Error("invalid");
-  if(!d.map.every(row=>Array.isArray(row)&&row.length===COLS))throw Error("invalid");
-  map=d.map;pellets=d.pellets;powerPellets=d.powerPellets;player=d.player;ghosts=d.ghosts;
-  score=Number(d.score)||0;life=Math.max(1,Number(d.life)||1);stage=Math.max(1,Number(d.stage)||1);powerTime=Number(d.powerTime)||0;
-  running=true;paused=false;updateStats();say("引き継ぎ成功！ STAGE "+stage);
-  lastTime=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(loop);
- }catch(e){say("コードが正しくありません")}
+  const d=decode(document.getElementById("savecode").value);
+
+  if(d.version!==3||!Array.isArray(d.map)||d.map.length!==N||
+     !d.player||!Array.isArray(d.ghosts))throw Error();
+
+  if(!d.map.every(row=>Array.isArray(row)&&row.length===N))throw Error();
+
+  map=d.map;
+  pellets=d.pellets;
+  powerPellets=d.powerPellets;
+  player=d.player;
+  ghosts=d.ghosts;
+  score=Number(d.score)||0;
+  life=Math.max(1,Number(d.life)||1);
+  stage=Math.max(1,Number(d.stage)||1);
+  powerTime=Number(d.powerTime)||0;
+
+  running=true;
+  paused=false;
+  stats();
+  say("引き継ぎ成功！ STAGE "+stage);
+  cancelAnimationFrame(raf);
+  lastTime=performance.now();
+  draw();
+  raf=requestAnimationFrame(loop);
+ }catch(e){
+  say("コードが正しくないか、対応していません");
+ }
 };
-makeMaze();player={x:1.5,y:1.5,dir:{x:0,y:0},next:{x:0,y:0}};ghosts=[];draw();
+
+makeMaze();
+player=makeActor(1,1);
+draw();
 </script>
 </body>
 </html>
